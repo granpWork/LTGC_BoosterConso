@@ -1,0 +1,3 @@
+[console_scripts]
+mask = mask.cli:main_func
+

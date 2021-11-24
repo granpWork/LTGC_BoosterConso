@@ -1,0 +1,16 @@
+RAW -> (1 - Geran) ONE BIG FILE (with the cleaner format) for ALL, then split
+                -> FILE A: one file with vaccination details per company                     File A-Batch2
+            -> FILE B: one file with VIMS details per company
+
+            (2 - Geran) File A -> Add in previous batches then consolidate to one big LTGC file (generate error logs)
+        Possible Errors:
+        Same date as first and second dose
+        Second dose date earlier than first dose
+        Moderna - atleast 28-day gap
+        AZ - 4-12 weeks
+
+        (3 - Lianne) File B -> convert to VIMS per sub-company (generate error logs)
+        Possible errors:
+        Email, Birthdate < 18
+        Birthdate vs category
+        Comorbidities vs category
