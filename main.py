@@ -231,6 +231,13 @@ def Generate_File(comp_name, df, param):
     elif param == 'b':
         templateFile = templateFileB
         Company_out_filename = comp_name + '_FileB_' + dateTime
+
+        df = df.loc[df['Scenario'] == 3].copy()
+
+        # df.drop('Scenario', inplace=True, axis=1)
+        df.drop('Scenario',
+                axis='columns', inplace=True, errors='raise')
+
     elif param == 'n':
         templateFile = templateFilePath
         Company_out_filename = comp_name + '_' + dateTime
@@ -302,6 +309,8 @@ def GenerateBackup():
     toSendPath = os.path.join(dirPath, 'Vaccine_Booster_Conso_' + dateTime2)
     shutil.make_archive(toSendPath, 'zip', toSend)
     # shutil.rmtree(toSend)
+
+    shutil.rmtree(toSend)
 
     pass
 
