@@ -242,7 +242,8 @@ def Generate_File(comp_name, df, param):
         templateFile = templateFilePath
         Company_out_filename = comp_name + '_' + dateTime
 
-    writeExcel(df, templateFile, folderName, Company_out_filename)
+    if len(df):
+        writeExcel(df, templateFile, folderName, Company_out_filename)
 
     pass
 
