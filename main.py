@@ -49,17 +49,72 @@ def mergingColumn(df, range, columnName):
     pass
 
 
+def getErrors_EqualDate(df):
+    vaccineBrand = ['Moderna', 'AstraZeneca']
+
+    df['Vaccine_days_gap'] = (df['Date of second dose'] - df['Date of first dose']).dt.days
+
+    Vac_Date_isEqual = df[
+        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] == 0) & (~df['Vaccine_days_gap'].isnull())]
+
+    errorMsg_equalDate = 'Vaccination date for 1st dose and 2nd dose should not be the same.'
+
+    iterateErrors_df(Vac_Date_isEqual, errorMsg_equalDate)
+    pass
+
+def getErrors_EarlierDate(df):
+    vaccineBrand = ['Moderna', 'AstraZeneca']
+
+    df['Vaccine_days_gap'] = (df['Date of second dose'] - df['Date of first dose']).dt.days
+
+    Vac_Date= df[
+        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] < 0) & (~df['Vaccine_days_gap'].isnull())]
+
+    ErrorMsg_notEarliest = 'Vaccination Date for 2nd dose should not be earlier than 1st dose.'
+
+    iterateErrors_df(Vac_Date, ErrorMsg_notEarliest)
+    pass
+
+
+def getErrors_YearAtleast2021(df):
+    df['year Date of first dose'] = df['Date of first dose'].dt.strftime("%Y")
+
+    df['year Date of first dose'] = df['year Date of first dose'].apply(lambda x: pd.to_numeric(x))
+    invalid_YearDateFirstDose = df[(df['year Date of first dose'] < 2021) & (~df['Vaccine_days_gap'].isnull())]
+
+    errMsg = 'Vaccination date for 1st dose should not be earlier 2021.'
+
+    iterateErrors_df(invalid_YearDateFirstDose, errMsg)
+    pass
+
+
+def Generate_Errors_28Days_gap(df):
+    df['is28_gap'] = df[['Date of first dose', 'Date of second dose', 'Select the vaccine brand.']].apply(
+        lambda x: is28Gap(x),
+        axis=1)
+
+    is28_gap_df = df.loc[df['is28_gap'] == False]
+    print(is28_gap_df)
+    errorMsg = 'AstraZeneca or Moderna Vaccine brand should atleast 28days gap from 1st dose date to 2nd dose date.'
+
+    iterateErrors_df(is28_gap_df, errorMsg)
+    pass
+
+
 def getData(inFile):
     filePath = os.path.join(inPath, inFile)
     df = pd.read_excel(filePath, dtype=str, na_filter=False)
 
     company = inFile.split('_COVID')[0]
 
-    withSubsColumn_arr = ['Philippine Airlines, Inc. and PAL Express Employees',
-                          'Philippine National Bank and Subsidiaries Employees',
-                          'PMFTC Inc. Employees',
-                          'Tanduay Distillers, Inc. and Subsidiaries Employees',
-                          'MacroAsia Corp., Subsidiaries & Affiliates Employees']
+    if 'Employees' in company:
+        company = company.replace(' Employees', '')
+
+    withSubsColumn_arr = ['Philippine Airlines, Inc. and PAL Express',
+                          'Philippine National Bank and Subsidiaries',
+                          'PMFTC Inc.',
+                          'Tanduay Distillers, Inc. and Subsidiaries',
+                          'MacroAsia Corp., Subsidiaries & Affiliates']
 
     scenarioList = ['Where did you get your initial doses of COVID-19 vaccines?',
                     'Do you have prior registration with eZConsult via LTGC?',
@@ -92,24 +147,25 @@ def getData(inFile):
 
     df['Company'] = company
 
-    column_names = ['ID', 'Start time', 'Completion time', 'Email', 'Name',
-                    'By filling out this form, I agree to participate in the booster vaccination program sponsored by LT Group, Inc., its subsidiaries and affiliates',
-                    'Consent for Personal Data Collection', 'What is the name of your employer?', 'Employee Number',
-                    'Last Name',
-                    'First Name', 'Middle Name', 'Suffix', 'Birthdate',
-                    'Where did you get your initial doses of COVID-19 vaccines?',
-                    'Do you have prior registration with eZConsult via LTGC?', 'new_eZConsult_Patient_ID',
-                    'new_vaccine_brand',
-                    'new_FirstDose_Date', 'new_FirstDose_BatchNo', 'new_FirstDose_VacSite', 'new_SecondDose_Date',
-                    'new_SecondDose_BatchNo', 'new_SecondDose_VacSite', 'Select your appropriate Priority Group',
-                    'Are you a member of an indigenous group?', 'Are you a PWD (Person with Disability)?', 'Occupation',
-                    'Mobile Number', 'Email Address', 'Region', 'new_province', 'new_city', 'Barangay', 'Sex',
-                    'Allergy to vaccines or components of vaccines?',
-                    'With Comorbidity/ies?', 'Please specify comorbidity/ies',
-                    'Select preferred vaccination site for your booster shot.',
-                    'Company']
+    # print(df.columns.values.tolist())
 
-    df = df.reindex(columns=column_names)
+    df = df[['ID', 'Start time', 'Completion time', 'Email', 'Name',
+             'By filling out this form, I agree to participate in the booster vaccination program sponsored by LT Group, Inc., its subsidiaries and affiliates',
+             'Consent for Personal Data Collection', 'What is the name of your employer?', 'Employee Number',
+             'Last Name',
+             'First Name', 'Middle Name', 'Suffix', 'Birthdate',
+             'Where did you get your initial doses of COVID-19 vaccines?',
+             'Do you have prior registration with eZConsult via LTGC?', 'new_eZConsult_Patient_ID',
+             'new_vaccine_brand',
+             'new_FirstDose_Date', 'new_FirstDose_BatchNo', 'new_FirstDose_VacSite', 'new_SecondDose_Date',
+             'new_SecondDose_BatchNo', 'new_SecondDose_VacSite', 'Select your appropriate Priority Group',
+             'Are you a member of an indigenous group?', 'Are you a PWD (Person with Disability)?', 'Occupation',
+             'Mobile Number', 'Email Address', 'Region', 'new_province', 'new_city', 'Barangay', 'Sex',
+             'Allergy to vaccines or components of vaccines?',
+             'With Comorbidity/ies?', 'Please specify comorbidity/ies',
+             'Select preferred vaccination site for your booster shot.',
+             'Company']]
+
     df.rename(columns={
         "new_eZConsult_Patient_ID": "Enter your eZConsult Patient ID number.",
         "new_vaccine_brand": "Select the vaccine brand.",
@@ -137,22 +193,19 @@ def getData(inFile):
 
     df['Vaccine_days_gap'] = (df['Date of second dose'] - df['Date of first dose']).dt.days
 
-    df['concats'] = df['Last Name'] + df['First Name'] + df['Middle Name'] + df['Employee Number']
+    df['concats'] = df['Last Name'] + df['First Name'] + df['Middle Name'] + df['Birthdate']
     df['concats'] = df['concats'].str.replace(' ', '')
 
     df.drop_duplicates(subset=['concats'], keep='last', inplace=True)
 
     # Drop extra column
-    df.drop(['concats', 'Vaccine_days_gap'],
+    df.drop(['concats'],
             axis='columns', inplace=True)
-
 
     # df['is_GreaterEqual_date'] = df[['Date of first dose', 'Date of second dose']].apply(
     #     lambda x: isGreaterEqualDate(x),
     #     axis=1)
     #
-    # df['is28_gap'] = df[['Date of first dose', 'Date of second dose', 'Select the vaccine brand.']].apply(lambda x: is28Gap(x),
-    #                                                                          axis=1)
 
     # print(df)
     # # get number of columns exist
@@ -218,16 +271,28 @@ def writeExcel(df, templateFilePath, outPath, outFilename):
     pass
 
 
-def Generate_File(comp_name, df, param):
-    # print(len(df))
-    folderName = os.path.join(compPath, comp_name)
+def createCompanyDirectory(comp_name):
+    company_folder_dir = os.path.join(compPath, comp_name)
 
-    if not path.exists(folderName):
-        os.makedirs(folderName)
+    if not path.exists(company_folder_dir):
+        os.makedirs(company_folder_dir)
+
+    return company_folder_dir
+
+
+def Generate_File(comp_name, df, param):
+    company_folder_dir = createCompanyDirectory(comp_name)
+    df = df.set_index(np.arange(1, len(df)+1))
 
     if param == 'a':
         templateFile = templateFileA
         Company_out_filename = comp_name + '_FileA_' + dateTime
+
+        if len(df):
+            getErrors_EqualDate(df)
+            getErrors_EarlierDate(df)
+            getErrors_YearAtleast2021(df)
+            Generate_Errors_28Days_gap(df)
     elif param == 'b':
         templateFile = templateFileB
         Company_out_filename = comp_name + '_FileB_' + dateTime
@@ -238,12 +303,17 @@ def Generate_File(comp_name, df, param):
         df.drop('Scenario',
                 axis='columns', inplace=True, errors='raise')
 
+        # Convert Date
+        df['Birthdate'] = pd.to_datetime(df['Birthdate'], errors='coerce')
+        df['Birthdate'] = df['Birthdate'].dt.strftime("%m/%d/%Y")
+
+
     elif param == 'n':
         templateFile = templateFilePath
         Company_out_filename = comp_name + '_' + dateTime
 
     if len(df):
-        writeExcel(df, templateFile, folderName, Company_out_filename)
+        writeExcel(df, templateFile, company_folder_dir, Company_out_filename)
 
     pass
 
@@ -274,6 +344,7 @@ def Generate_File_per_Company(master_df):
                         'Mobile Number', 'Email Address', 'Region', 'Province', 'City', 'Barangay', 'Sex',
                         'Allergy to vaccines or components of vaccines?',
                         'With Comorbidity/ies?', 'Please specify comorbidity/ies',
+                        'Select preferred vaccination site for your booster shot.',
                         'Company', 'Scenario']
 
     for comp, records in groups:
@@ -334,20 +405,55 @@ def is28Gap(x):
         else:
             return False
     else:
-        return
+        return ''
 
     pass
 
 
-def Generate_Errors_greatEqualDate(df):
+def getError_VaccineDaysGap(x):
+    vaccineBrand = ['Moderna', 'AstraZeneca']
+    days_gap = (x['Date of second dose'] - x['Date of first dose']).days
 
-    df_date = df.loc[df['Is Ctrlnum Dup'] == True]
+    if not x['Select the vaccine brand.'] in vaccineBrand:
 
+        if days_gap <= 0:
+            return True
+        else:
+            return False
+    else:
+        return ''
+
+    pass
+
+
+def generateErrorLog(errMsg, comp, arg):
+    createCompanyDirectory(comp)
+
+    # e.g '/Users/ran/Documents/Vaccine/Booster_Conso/company/Century Park Hotel/Century Park Hotel_err_log.txt'
+    path = os.path.join(os.path.join(compPath, comp), comp + "_err_log.txt")
+    print(path)
+    if len(errMsg):
+        f = open(path, "a")
+        for err in errMsg:
+            f.writelines(err + "\n")
+
+        errMsg.clear()
+    pass
+
+
+def iterateErrors_df(df, errorMSg):
     arrid = []
     errMsg = []
 
-    print(df_date)
+    groups = df.groupby('Company')
 
+    for comp, records in groups:
+        for j, row in records.iterrows():
+            arrid.append(str(j+1))
+
+        errMsg.append("Error: Row -  [" + ','.join(list(dict.fromkeys(
+            arrid))) + "] - " + errorMSg)
+        generateErrorLog(errMsg, comp, 'none')
     pass
 
 
@@ -397,8 +503,6 @@ if __name__ == '__main__':
             arrdfFrames.append(getData(inFile))
 
     master_df = pd.concat(arrdfFrames)
-
-    # Generate_Errors_greatEqualDate(master_df)
 
     Generate_File_per_Company(master_df)
 

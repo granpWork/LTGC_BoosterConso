@@ -4,13 +4,39 @@ RAW -> (1 - Geran) ONE BIG FILE (with the cleaner format) for ALL, then split
 
             (2 - Geran) File A -> Add in previous batches then consolidate to one big LTGC file (generate error logs)
         Possible Errors:
-        Same date as first and second dose
-        Second dose date earlier than first dose
-        Moderna - atleast 28-day gap
-        AZ - 4-12 weeks
+        1. Same date as first and second dose
+        2. Second dose date earlier than first dose
+        3. Moderna - atleast 28-day gap
+        4. AZ - 4-12 weeks
+        5. 1st dose should not be less january 2021
 
         (3 - Lianne) File B -> convert to VIMS per sub-company (generate error logs)
         Possible errors:
         Email, Birthdate < 18
         Birthdate vs category
         Comorbidities vs category
+
+    Vac_Date_isEqual = df[
+        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] == 0)]
+    Vac_Date_isEarlier = df[
+        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] < 0)]
+
+    def getData(inFile):
+    filePath = os.path.join(inPath, inFile)
+    df = pd.read_excel(filePath, dtype=str, na_filter=False)
+
+    company = inFile.split('_COVID')[0]
+
+    if 'Employees' in company:
+        company = company.replace(' Employees', '')
+
+    withSubsColumn_arr = ['Philippine Airlines, Inc. and PAL Express',
+                          'Philippine National Bank and Subsidiaries',
+                          'PMFTC Inc.',
+                          'Tanduay Distillers, Inc. and Subsidiaries',
+                          'MacroAsia Corp., Subsidiaries & Affiliates']
+
+    scenarioList = ['Where did you get your initial doses of COVID-19 vaccines?',
+                    'Do you have prior registration with eZConsult via LTGC?',
+                    'Enter your eZConsult Patient ID number.'
+                    ]
