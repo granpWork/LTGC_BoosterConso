@@ -55,20 +55,23 @@ def getErrors_EqualDate(df):
     df['Vaccine_days_gap'] = (df['Date of second dose'] - df['Date of first dose']).dt.days
 
     Vac_Date_isEqual = df[
-        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] == 0) & (~df['Vaccine_days_gap'].isnull())]
+        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] == 0) & (
+            ~df['Vaccine_days_gap'].isnull())]
 
     errorMsg_equalDate = 'Vaccination date for 1st dose and 2nd dose should not be the same.'
 
     iterateErrors_df(Vac_Date_isEqual, errorMsg_equalDate)
     pass
 
+
 def getErrors_EarlierDate(df):
     vaccineBrand = ['Moderna', 'AstraZeneca']
 
     df['Vaccine_days_gap'] = (df['Date of second dose'] - df['Date of first dose']).dt.days
 
-    Vac_Date= df[
-        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] < 0) & (~df['Vaccine_days_gap'].isnull())]
+    Vac_Date = df[
+        (~df['Select the vaccine brand.'].isin(vaccineBrand)) & (df['Vaccine_days_gap'] < 0) & (
+            ~df['Vaccine_days_gap'].isnull())]
 
     ErrorMsg_notEarliest = 'Vaccination Date for 2nd dose should not be earlier than 1st dose.'
 
@@ -94,10 +97,97 @@ def Generate_Errors_28Days_gap(df):
         axis=1)
 
     is28_gap_df = df.loc[df['is28_gap'] == False]
-    print(is28_gap_df)
+
     errorMsg = 'AstraZeneca or Moderna Vaccine brand should atleast 28days gap from 1st dose date to 2nd dose date.'
 
     iterateErrors_df(is28_gap_df, errorMsg)
+    pass
+
+
+def getDosageStrength(vaccine):
+
+    vaccine = vaccine.lower()
+    dosage = {
+        "moderna": 0.5,
+        "sinovac": 0.5,
+        "astrazeneca": 0.5,
+        "janssen by j&j": 0.5,
+        "pfizer-biontech": 0.3,
+        "gamaleya": 0.5,
+        "sinofarm": 0.5,
+        "sputnik v": 0.5,
+        "covaxin": 0.5,
+    }
+
+    if vaccine is not None:
+        if vaccine in dosage:
+            return dosage.get(vaccine)
+        else:
+            return 0
+    else:
+        return 0
+
+    pass
+
+
+def get_OVT1(ovt_first_df, company):
+    company_folder_dir = createCompanyDirectory(company)
+    Company_out_filename = 'OVT1_'+company+'_scn2'
+
+    getDosageStrength('Moderna')
+
+    ovt_first_df['Date of first dose'] = pd.to_datetime(ovt_first_df['Date of first dose'], errors='coerce')
+    ovt_first_df['Date of first dose'] = ovt_first_df['Date of first dose'].dt.strftime("%m/%d/%Y")
+
+    ovt_first_df['Patient ID'] = ovt_first_df['Enter your eZConsult Patient ID number.']
+    ovt_first_df['Dosage Type'] = 'first'
+    ovt_first_df['Vaccination Date (mm/dd/yyyy)'] = ovt_first_df['Date of first dose']
+    ovt_first_df['Vaccination Time'] = '13:00'
+    ovt_first_df['Vaccine Manufacturer Name'] = ovt_first_df['Select the vaccine brand.']
+    ovt_first_df['Vaccine Material Name'] = ovt_first_df['Select the vaccine brand.']
+    ovt_first_df['Batch ID'] = ovt_first_df['Batch No. / Lot No. of first dose']
+    ovt_first_df['Injection Area'] = 'Left Arm'
+    ovt_first_df['Dosage Strength'] = ovt_first_df.apply(
+        lambda x: getDosageStrength(x['Select the vaccine brand.']), axis=1)
+    # ovt_first_df['Dosage Strength'] = 0
+    ovt_first_df['Heart Rate'] = '--'
+    ovt_first_df['Temperature'] = '--'
+    ovt_first_df['Blood Pressure'] = '--'
+    ovt_first_df['Vaccination Site Name (for non-eZVax)'] = ovt_first_df['Select preferred vaccination site for your booster shot.']
+    ovt_first_df['Nurse Name (for non-eZVax)'] = 'HCP'
+    ovt_first_df['Dosage Interval (days)'] = '--'
+
+    ovt_first_df = ovt_first_df[['Patient ID', 'Last Name', 'First Name', 'Middle Name', 'Dosage Type',
+                                 'Vaccination Date (mm/dd/yyyy)', 'Vaccination Time', 'Vaccine Manufacturer Name',
+                                 'Vaccine Material Name', 'Batch ID', 'Injection Area', 'Dosage Strength', 'Heart Rate',
+                                 'Temperature', 'Blood Pressure', 'Vaccination Site Name (for non-eZVax)',
+                                 'Nurse Name (for non-eZVax)', 'Dosage Interval (days)', 'Scenario']]
+
+
+    ovt_first_Scenario2_df = ovt_first_df[ovt_first_df['Scenario'] == 2]
+    ovt_first_Scenario3_df = ovt_first_df[ovt_first_df['Scenario'] == 3]
+    print(ovt_first_Scenario3_df)
+
+    if len(ovt_first_Scenario2_df):
+        Company_out_filename = 'OVT1_' + company + '_scn2'
+        writeExcel(ovt_first_Scenario2_df, templateFileOVT, company_folder_dir, Company_out_filename, 'Sheet1')
+
+    if len(ovt_first_Scenario3_df):
+        Company_out_filename = 'OVT1_' + company + '_scn3'
+        writeExcel(ovt_first_Scenario3_df, templateFileOVT, company_folder_dir, Company_out_filename, 'Sheet1')
+
+    pass
+
+
+def generate_OVT_file(df, company):
+    ovt_first_df = df.loc[~df['Date of first dose'].isnull()].copy()
+    ovt_second_df = df.loc[~df['Date of second dose'].isnull()].copy()
+
+    # print(ovt_first_df)
+
+    if len(ovt_first_df):
+        get_OVT1(ovt_first_df, company)
+
     pass
 
 
@@ -182,7 +272,6 @@ def getData(inFile):
     if len(df):
         df['Scenario'] = df[scenarioList].apply(lambda x: myScenario(x), axis=1)
 
-
     df['Date of first dose'] = df.apply(lambda x: convertDateFormat(x.name, x['Date of first dose']),
                                         axis=1)
     df['Date of second dose'] = df.apply(lambda x: convertDateFormat(x.name, x['Date of second dose']),
@@ -194,7 +283,7 @@ def getData(inFile):
     df['Vaccine_days_gap'] = (df['Date of second dose'] - df['Date of first dose']).dt.days
 
     df['concats'] = df['Last Name'] + df['First Name'] + df['Middle Name'] + df['Birthdate']
-    df['concats'] = df['concats'].str.replace(' ', '')
+    df['concats'] = df['concats'].str.replace(' ', '').str.lower()
 
     df.drop_duplicates(subset=['concats'], keep='last', inplace=True)
 
@@ -210,6 +299,8 @@ def getData(inFile):
     # print(df)
     # # get number of columns exist
     # print(len(df.columns))
+
+    # generate_OVT_file(df, company)
 
     return df
 
@@ -254,7 +345,7 @@ def duplicateTemplateLTGC(tempLTGC_Path, out, outputFilename):
     pass
 
 
-def writeExcel(df, templateFilePath, outPath, outFilename):
+def writeExcel(df, templateFilePath, outPath, outFilename, sheet):
     # Create copy of template file and save it to out folder
     templateFile = duplicateTemplateLTGC(templateFilePath, outPath, outFilename)
 
@@ -262,7 +353,7 @@ def writeExcel(df, templateFilePath, outPath, outFilename):
     writer = pd.ExcelWriter(templateFile, engine='openpyxl', mode='a')
     writer.book = openpyxl.load_workbook(templateFile)
     writer.sheets = dict((ws.title, ws) for ws in writer.book.worksheets)
-    df.to_excel(writer, sheet_name="Form1", startrow=1, header=False, index=False)
+    df.to_excel(writer, sheet_name=sheet, startrow=1, header=False, index=False)
 
     writer.save()
 
@@ -282,7 +373,7 @@ def createCompanyDirectory(comp_name):
 
 def Generate_File(comp_name, df, param):
     company_folder_dir = createCompanyDirectory(comp_name)
-    df = df.set_index(np.arange(1, len(df)+1))
+    df = df.set_index(np.arange(1, len(df) + 1))
 
     if param == 'a':
         templateFile = templateFileA
@@ -293,6 +384,16 @@ def Generate_File(comp_name, df, param):
             getErrors_EarlierDate(df)
             getErrors_YearAtleast2021(df)
             Generate_Errors_28Days_gap(df)
+
+        dropColumns = ['Vaccine_days_gap', 'year Date of first dose', 'is28_gap', 'Scenario']
+        df.drop(columns=dropColumns, axis='columns', inplace=True, errors='raise')
+
+        df['Date of first dose'] = pd.to_datetime(df['Date of first dose'], errors='coerce')
+        df['Date of first dose'] = df['Date of first dose'].dt.strftime("%m/%d/%Y")
+
+        df['Date of second dose'] = pd.to_datetime(df['Date of second dose'], errors='coerce')
+        df['Date of second dose'] = df['Date of second dose'].dt.strftime("%m/%d/%Y")
+
     elif param == 'b':
         templateFile = templateFileB
         Company_out_filename = comp_name + '_FileB_' + dateTime
@@ -307,13 +408,12 @@ def Generate_File(comp_name, df, param):
         df['Birthdate'] = pd.to_datetime(df['Birthdate'], errors='coerce')
         df['Birthdate'] = df['Birthdate'].dt.strftime("%m/%d/%Y")
 
-
     elif param == 'n':
         templateFile = templateFilePath
         Company_out_filename = comp_name + '_' + dateTime
 
     if len(df):
-        writeExcel(df, templateFile, company_folder_dir, Company_out_filename)
+        writeExcel(df, templateFile, company_folder_dir, Company_out_filename, 'Form1')
 
     pass
 
@@ -431,7 +531,7 @@ def generateErrorLog(errMsg, comp, arg):
 
     # e.g '/Users/ran/Documents/Vaccine/Booster_Conso/company/Century Park Hotel/Century Park Hotel_err_log.txt'
     path = os.path.join(os.path.join(compPath, comp), comp + "_err_log.txt")
-    print(path)
+
     if len(errMsg):
         f = open(path, "a")
         for err in errMsg:
@@ -449,7 +549,7 @@ def iterateErrors_df(df, errorMSg):
 
     for comp, records in groups:
         for j, row in records.iterrows():
-            arrid.append(str(j+1))
+            arrid.append(str(j + 1))
 
         errMsg.append("Error: Row -  [" + ','.join(list(dict.fromkeys(
             arrid))) + "] - " + errorMSg)
@@ -489,6 +589,7 @@ if __name__ == '__main__':
     templateFilePath = 'src/template/template.xlsx'
     templateFileA = 'src/template/file_a.xlsx'
     templateFileB = 'src/template/file_b.xlsx'
+    templateFileOVT = 'src/template/ovt_template.xlsx'
 
     outFilename = 'BoosterShot_Consolidated_' + dateTime
 
@@ -506,6 +607,6 @@ if __name__ == '__main__':
 
     Generate_File_per_Company(master_df)
 
-    writeExcel(master_df, templateFilePath, outPath, outFilename)
+    writeExcel(master_df, templateFilePath, outPath, outFilename, 'Form1')
 
     GenerateBackup()

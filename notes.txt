@@ -40,3 +40,65 @@ RAW -> (1 - Geran) ONE BIG FILE (with the cleaner format) for ALL, then split
                     'Do you have prior registration with eZConsult via LTGC?',
                     'Enter your eZConsult Patient ID number.'
                     ]
+
+==============
+Questions
+1. Re-clarify how we understand handling of different scenarios
+ a. Data uploaded and vaccinated by LTGC  - no action needed
+
+
+
+ b. Data uploaded but with booking and status is NO-show
+    b.1 - (IT) Provide OVT1_CompanyName.xlsx and OVT2_CompanyName.xlsx
+    b.2 - (HR) Confirm if inputted patient ID is correct vs CEIR
+    b.3 - (HR) Prior upload - delete Last Name, First Name and Middle Name columns
+    b.4 - (HR) Send email to ZP containing the OVT1_CompanyName.xlsx and OVT2_CompanyName.xlsx
+    ovt1_scenario2_2.1
+    vaccination Stage = pending 1st dose
+    Appointment Status = Cancel, No Showted, Rejected - (booked???)
+
+    2.2
+    Vaccineation stage = Pending 1st Dose
+    Appointment_status = pending or blank
+
+    2.3
+    vaccination Stage = pending 1st dose
+    Data source = 2nd dose
+    Appointment Status = Cancel, No Showted, Rejected - (booked???)
+
+
+
+
+
+
+ c. Data uploaded but no booking - only OVT1 and OVT2 to be loaded
+    c.1 - (IT) Provide OVT1_CompanyName.xlsx and OVT2_CompanyName.xlsx
+    c.2 - (HR) Confirm if inputted patient ID is correct vs eZconsult (manually) - unless with ZP report
+    c.3 - (HR) Prior upload - delete Last Name, First Name and Middle Name columns
+    c.4 - (HR) Upload OVT1_CompanyName.xlsx then OVT2_CompanyName.xlsx
+    vaccination Stage = pending 1st dose
+    Appointment Status = Blank
+
+
+
+ d. No data uploaded in EZ - VIMS, OVT1 and OVT2
+    d.1 - (IT) Provide Final VIMS Report for upload to HR Representatives
+    d.2 - (HR) Upload VIMS in EZ
+    NOTE: Failed records needs further investigation by HR - if needed, fix the error then reupload
+    d.3 - (HR) Download all Upload logs and filter Successful - take note of the Patient IDs
+    d.4 - (HR) Copy-Paste Patient IDs in provided OVT1_CompanyName.xlsx and OVT2_CompanyName.xlsx
+    d.5 - (HR) Prior upload - delete Last Name, First Name and Middle Name columns
+    d.6 - (HR) Upload OVT1_CompanyName.xlsx then OVT2_CompanyName.xlsx
+
+
+
+PART 2
+1. HR Reps will provide LTG IT the final count per company, following two options below:
+    a. Encourage EE to click the interested button in EZ
+    b. Manually call and confirm their EE's interest/confirmation
+
+2. LTG IT to either create or request booking slots (depending on the site)
+
+3. HR Reps to book their EEs
+Clover and covaxin - not part of the drop-down
+Default Nurse Name (?)
