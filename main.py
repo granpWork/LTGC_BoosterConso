@@ -21,7 +21,7 @@ from shutil import copyfile
 
 # Press the green button in the gutter to run the script.
 def CreateFolders(folderName, __rootPath):
-    folderList = ['in', 'out', 'log', 'company', 'toSend_Booster_Signup_Conso']
+    folderList = ['in', 'out', 'log', 'company', 'ovt', 'clean', 'toSend_Booster_Signup_Conso', 'file_b', 'file_b_v2']
 
     folderName = os.path.join(__rootPath, folderName)
 
@@ -105,7 +105,6 @@ def Generate_Errors_28Days_gap(df):
 
 
 def getDosageStrength(vaccine):
-
     vaccine = vaccine.lower()
     dosage = {
         "moderna": 0.5,
@@ -132,7 +131,7 @@ def getDosageStrength(vaccine):
 
 def get_OVT1(ovt_first_df, company):
     company_folder_dir = createCompanyDirectory(company)
-    Company_out_filename = 'OVT1_'+company+'_scn2'
+    Company_out_filename = 'OVT1_' + company + '_scn2'
 
     getDosageStrength('Moderna')
 
@@ -153,7 +152,8 @@ def get_OVT1(ovt_first_df, company):
     ovt_first_df['Heart Rate'] = '--'
     ovt_first_df['Temperature'] = '--'
     ovt_first_df['Blood Pressure'] = '--'
-    ovt_first_df['Vaccination Site Name (for non-eZVax)'] = ovt_first_df['Select preferred vaccination site for your booster shot.']
+    ovt_first_df['Vaccination Site Name (for non-eZVax)'] = ovt_first_df[
+        'Select preferred vaccination site for your booster shot.']
     ovt_first_df['Nurse Name (for non-eZVax)'] = 'HCP'
     ovt_first_df['Dosage Interval (days)'] = '--'
 
@@ -162,7 +162,6 @@ def get_OVT1(ovt_first_df, company):
                                  'Vaccine Material Name', 'Batch ID', 'Injection Area', 'Dosage Strength', 'Heart Rate',
                                  'Temperature', 'Blood Pressure', 'Vaccination Site Name (for non-eZVax)',
                                  'Nurse Name (for non-eZVax)', 'Dosage Interval (days)', 'Scenario']]
-
 
     ovt_first_Scenario2_df = ovt_first_df[ovt_first_df['Scenario'] == 2]
     ovt_first_Scenario3_df = ovt_first_df[ovt_first_df['Scenario'] == 3]
@@ -195,16 +194,25 @@ def getData(inFile):
     filePath = os.path.join(inPath, inFile)
     df = pd.read_excel(filePath, dtype=str, na_filter=False)
 
-    company = inFile.split('_COVID')[0]
+    if inFile.__contains__("OGC"):
+        company = inFile.split('COVID')[0]
+    else:
+        company = inFile.split('_COVID')[0]
 
     if 'Employees' in company:
         company = company.replace(' Employees', '')
 
     withSubsColumn_arr = ['Philippine Airlines, Inc. and PAL Express',
+                          'Philippine Airlines, Inc. and PAL Express Employees',
+                          'MacroAsia Corp., Subsidiaries & Affiliates Employees',
+                          'Tanduay Distillers, Inc. and Subsidiaries Employees',
                           'Philippine National Bank and Subsidiaries',
                           'PMFTC Inc.',
                           'Tanduay Distillers, Inc. and Subsidiaries',
-                          'MacroAsia Corp., Subsidiaries & Affiliates']
+                          'MacroAsia Corp., Subsidiaries & Affiliates',
+                          'Tanduay Distillers, Inc. and Subsidiaries Service Providers',
+                          'Philippine Airlines, Inc. and PAL Express Service Providers',
+                          'MacroAsia Subsidiaries & Affiliates service providers']
 
     scenarioList = ['Where did you get your initial doses of COVID-19 vaccines?',
                     'Do you have prior registration with eZConsult via LTGC?',
@@ -256,6 +264,10 @@ def getData(inFile):
              'Select preferred vaccination site for your booster shot.',
              'Company']]
 
+    # PAL
+    # MAc
+    # TDI
+
     df.rename(columns={
         "new_eZConsult_Patient_ID": "Enter your eZConsult Patient ID number.",
         "new_vaccine_brand": "Select the vaccine brand.",
@@ -288,8 +300,7 @@ def getData(inFile):
     df.drop_duplicates(subset=['concats'], keep='last', inplace=True)
 
     # Drop extra column
-    df.drop(['concats'],
-            axis='columns', inplace=True)
+    # df.drop(['concats'], axis='columns', inplace=True)
 
     # df['is_GreaterEqual_date'] = df[['Date of first dose', 'Date of second dose']].apply(
     #     lambda x: isGreaterEqualDate(x),
@@ -374,7 +385,7 @@ def createCompanyDirectory(comp_name):
 def Generate_File(comp_name, df, param):
     company_folder_dir = createCompanyDirectory(comp_name)
     df = df.set_index(np.arange(1, len(df) + 1))
-
+    # print(df)
     if param == 'a':
         templateFile = templateFileA
         Company_out_filename = comp_name + '_FileA_' + dateTime
@@ -394,6 +405,8 @@ def Generate_File(comp_name, df, param):
         df['Date of second dose'] = pd.to_datetime(df['Date of second dose'], errors='coerce')
         df['Date of second dose'] = df['Date of second dose'].dt.strftime("%m/%d/%Y")
 
+        writeExcel(df, templateFile, company_folder_dir, Company_out_filename, 'Form1')
+
     elif param == 'b':
         templateFile = templateFileB
         Company_out_filename = comp_name + '_FileB_' + dateTime
@@ -408,17 +421,58 @@ def Generate_File(comp_name, df, param):
         df['Birthdate'] = pd.to_datetime(df['Birthdate'], errors='coerce')
         df['Birthdate'] = df['Birthdate'].dt.strftime("%m/%d/%Y")
 
+        writeExcel(df, templateFile, company_folder_dir, Company_out_filename, 'Form1')
+        writeExcel(df, templateFile, FileB_path, Company_out_filename, 'Form1')
+
+    elif param == 'b_v2':
+        templateFile = templateFileB_v2
+        Company_out_filename = comp_name + '_FileB_v2_' + dateTime
+        df = df.loc[df['Scenario'] == 3].copy()
+
+        # df.drop('Scenario', inplace=True, axis=1)
+        df.drop('Scenario',
+                axis='columns', inplace=True, errors='raise')
+
+        # Convert Date
+        df['Birthdate'] = pd.to_datetime(df['Birthdate'], errors='coerce')
+        df['Birthdate'] = df['Birthdate'].dt.strftime("%m/%d/%Y")
+
+        df['Date of first dose'] = pd.to_datetime(df['Date of first dose'], errors='coerce')
+        df['Date of first dose'] = df['Date of first dose'].dt.strftime("%m/%d/%Y")
+
+        df['Date of second dose'] = pd.to_datetime(df['Date of second dose'], errors='coerce')
+        df['Date of second dose'] = df['Date of second dose'].dt.strftime("%m/%d/%Y")
+
+        if len(df):
+            writeExcel(df, templateFile, company_folder_dir, Company_out_filename, 'Form1')
+            writeExcel(df, templateFile, FileB_v2_path, Company_out_filename, 'Form1')
+
+    elif param == 'ovt':
+        templateFile = templateFilePath
+        Company_out_filename = comp_name + '_ovt_' + dateTime
+
+        writeExcel(df, templateFile, ovtPath, Company_out_filename, 'Form1')
+
+    elif param == 'clean':
+        templateFile = templateFilePath
+        Company_out_filename = comp_name + '_clean_' + dateTime
+        df.drop(['Vaccine_days_gap', 'concats'],
+                axis='columns', inplace=True, errors='raise')
+
+        writeExcel(df, templateFile, cleanPath, Company_out_filename, 'Form1')
+
+
     elif param == 'n':
         templateFile = templateFilePath
         Company_out_filename = comp_name + '_' + dateTime
 
-    if len(df):
         writeExcel(df, templateFile, company_folder_dir, Company_out_filename, 'Form1')
 
     pass
 
 
 def Generate_File_per_Company(master_df):
+    master_df['Mobile Number'] = '0'
     groups = master_df.groupby('Company')
     fileA_column_arr = ['ID', 'Start time', 'Completion time', 'Email', 'Name',
                         'By filling out this form, I agree to participate in the booster vaccination program sponsored by LT Group, Inc., its subsidiaries and affiliates',
@@ -447,13 +501,35 @@ def Generate_File_per_Company(master_df):
                         'Select preferred vaccination site for your booster shot.',
                         'Company', 'Scenario']
 
+    fileB_v2_column_arr = ['ID', 'Start time', 'Completion time', 'Email', 'Name',
+                           'By filling out this form, I agree to participate in the booster vaccination program sponsored by LT Group, Inc., its subsidiaries and affiliates',
+                           'Consent for Personal Data Collection', 'What is the name of your employer?',
+                           'Employee Number',
+                           'Last Name', 'First Name', 'Middle Name', 'Suffix', 'Birthdate',
+                           'Select your appropriate Priority Group',
+                           'Are you a member of an indigenous group?', 'Are you a PWD (Person with Disability)?',
+                           'Occupation',
+                           'Mobile Number', 'Email Address', 'Region', 'Province', 'City', 'Barangay', 'Sex',
+                           'Allergy to vaccines or components of vaccines?',
+                           'With Comorbidity/ies?', 'Please specify comorbidity/ies',
+                           'Select preferred vaccination site for your booster shot.',
+                           'Company', 'Scenario', 'Select the vaccine brand.',
+                           'Date of first dose', 'Batch No. / Lot No. of first dose',
+                           'Place of vaccination of first dose',
+                           'Date of second dose', 'Batch No. / Lot No. of second dose',
+                           'Place of vaccination of second dose']
+
     for comp, records in groups:
         FileA = records.reindex(columns=fileA_column_arr)
         FileB = records.reindex(columns=fileB_column_arr)
+        FileB_v2 = records.reindex(columns=fileB_v2_column_arr)
 
         Generate_File(comp, FileA, 'a')
         Generate_File(comp, FileB, 'b')
+        Generate_File(comp, FileB_v2, 'b_v2')
         Generate_File(comp, records, 'n')
+        Generate_File(comp, records, 'ovt')
+        Generate_File(comp, records, 'clean')
 
     pass
 
@@ -466,6 +542,7 @@ def GenerateBackup():
 
     toSendDirZip = os.path.join(toSend, os.path.split(companyZipFilesPath)[1])
     shutil.move(companyZipFilesPath, toSendDirZip)
+    shutil.move(ovtPath, toSend)
 
     # Get the latest generated file from directory (For consolited file)
     outPathFiles_list = os.listdir(outPath)
@@ -581,6 +658,10 @@ if __name__ == '__main__':
     inPath = os.path.join(dirPath, "in")
     outPath = os.path.join(dirPath, "out")
     logPath = os.path.join(dirPath, "log")
+    ovtPath = os.path.join(dirPath, "ovt")
+    cleanPath = os.path.join(dirPath, "clean")
+    FileB_path = os.path.join(dirPath, "file_b")
+    FileB_v2_path = os.path.join(dirPath, "file_b_v2")
     compPath = os.path.join(dirPath, "company")
     toSend = os.path.join(dirPath, "toSend_Booster_Signup_Conso")
 
@@ -589,6 +670,7 @@ if __name__ == '__main__':
     templateFilePath = 'src/template/template.xlsx'
     templateFileA = 'src/template/file_a.xlsx'
     templateFileB = 'src/template/file_b.xlsx'
+    templateFileB_v2 = 'src/template/file_b_v2.xlsx'
     templateFileOVT = 'src/template/ovt_template.xlsx'
 
     outFilename = 'BoosterShot_Consolidated_' + dateTime
